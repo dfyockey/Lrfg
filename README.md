@@ -1,12 +1,12 @@
-# README for lfrg
+# README for lrfg
   
-  `lfrg` is a Latest Release Files Generator script for use in
+  `lrfg` is a Latest Release Files Generator script for use in
   conjunction with GitHub. It's a proof-of-concept implementation of a
   solution to the problem of how to provide a link directly to a release
   asset in a repository's latest release in the case where releases are
   tagged with version numbers.
   
-  As implemented, `lfrg` uses GitHub's REST API where needed to do the
+  As implemented, `lrfg` uses GitHub's REST API where needed to do the
   following:
   1. Download info about the latest release of a specified repository
      belonging to a specified user.
