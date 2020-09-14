@@ -46,7 +46,7 @@
 #
 
 user="dfyockey"
-repo="XSLT_PEDS"
+repo="hello-world"
 wrkdir=$(pwd)
 tmpdir="/tmp/lrfg"
 mkdir "$tmpdir"
