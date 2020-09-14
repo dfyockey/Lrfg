@@ -1,0 +1,106 @@
+#!/bin/bash
+#
+# lrfg - Latest Release Files Generator
+#
+# MIT License
+#
+# Copyright © 2020 David Yockey
+#
+# Permission is hereby granted, free of charge, to any person obtaining
+# a copy of this software and associated documentation files (the
+# "Software"), to deal in the Software without restriction, including
+# without limitation the rights to use, copy, modify, merge, publish,
+# distribute, sublicense, and/or sell copies of the Software, and to
+# permit persons to whom the Software is furnished to do so, subject to
+# the following conditions:
+#
+# The above copyright notice and this permission notice shall be
+# included in all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+# CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+# TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+# SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#
+#
+# Notes - Generates files for the latest release such that each release
+#         has files with the same names.
+#       - Uses GitHub's REST API, particularly repository-related parts
+#         https://docs.github.com/en/rest/reference/repos
+#       - To use this script, `user` and `repo` variables must be
+#         changed as needed.
+#       - A personal access token is also required to use this script
+#         https://github.blog/2013-05-16-personal-api-tokens/
+#       - The script pulls the token from a text file with the token
+#         alone on the last line of a text file because I use a two-line
+#         text file with a descriptive line followed by a line
+#         containing the token, but the source of the token and means
+#         for its retrieval may be modified as desired.
+#       - Hardcoding the token into the script is not advisable.
+#       - To access a latest release file, use one of the following URLs:
+#         https://github.com/<user>/<repo>/releases/latest/download/<repo>-release.zip
+#         https://github.com/<user>/<repo>/releases/latest/download/<repo>-release.tar.gz
+#
+
+user="dfyockey"
+repo="XSLT_PEDS"
+wrkdir=$(pwd)
+tmpdir="/tmp/lrfg"
+mkdir "$tmpdir"
+reldata="$tmpdir/latest.lrfg"
+
+# May not be needed to access GitHub's API, but good practice to include...
+ACCEPT="Accept: application/vnd.github.v3+json"
+
+# Pull a personal access token from the last line of a text file
+API_TOKEN=$(tail -n 1 ~/Library/Tokens/lrfg)
+
+# Get data on the latest release
+curl -s -H "$ACCEPT" "https://api.github.com/repos/$user/$repo/releases/latest" > "$reldata"
+
+# Get the release_id
+id=$(grep id "$reldata" | sed 's/\(.*\):.\(.*\),$/\2/')
+#echo "id = $id"
+
+# Get the version
+ver=$(grep tag_name "$reldata" | sed 's/\(.*\)\"\(.*\)\"\(.*\)$/\2/')
+
+# Get the zipball
+zipurl=$(grep zipball_url "$reldata" | sed 's/\(.*\)\"\(https.*\)\"\(.*\)$/\2/')
+curl -s -L -o "$tmpdir/$repo-release.zip" "$zipurl"
+
+# Modify release content to
+# 	- give the root directory a fixed name
+#	- remove unneeded files and directory
+#	- and generate new compressed files containing the modified content.
+cd "$tmpdir"
+unzip "$repo-release.zip"
+	# Remove old zip file ASAP to avoid collision issues
+	rm "$repo-release.zip"
+	dir=$(ls | grep "$repo")
+	mv "$dir" "$repo"
+	echo "$repo $ver" > "$repo/VERSION"
+	rm -f "$repo/.gitignore"
+	rm -rf "$repo/.github/"
+zip -r "$wrkdir/$repo-release.zip" "$repo"
+tar czf "$wrkdir/$repo-release.tar.gz" "$repo"
+cd "$wrkdir"
+
+uploadAsset() {
+	assetfile="$1"
+	type="$2"
+	upload_url=$(grep upload_url "$reldata" | sed 's/\(.*\)\"\(https.*\)\"\(.*\)$/\2/')
+	upload_asset_url=$(echo $upload_url | sed "s/{?name,label}/?name=\"$assetfile\"/")
+	curl -s -X POST -L --data-binary @"$assetfile" -u "$user:$API_TOKEN" -H "$ACCEPT" -H "Content-Type: $type" $upload_asset_url
+}
+
+uploadAsset "$repo-release.zip" "application/zip"
+uploadAsset "$repo-release.tar.gz" "application/gzip"
+
+# Cleanup
+rm "$repo-release.zip" "$repo-release.tar.gz"
+rm "$reldata"
+rm -rf "$tmpdir"
