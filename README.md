@@ -1,4 +1,4 @@
-# README for lrfg
+# README for Lrfg
   
   `lrfg` is a Latest Release Files Generator script for use in
   conjunction with GitHub. It's a proof-of-concept implementation of a
