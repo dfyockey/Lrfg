@@ -82,9 +82,10 @@ unzip "$repo-release.zip"
 	rm "$repo-release.zip"
 	dir=$(ls | grep "$repo")
 	mv "$dir" "$repo"
-	echo "$repo $ver" > "$repo/VERSION"
+	echo "$repo $ver" > "$repo/VERSION_$ver"	# Tack on version number to simplify viewing by user
 	rm -f "$repo/.gitignore"
 	rm -rf "$repo/.github/"
+	mv "$repo/README.md" "$repo/README.txt"		# Rename README to facilitate reading on user's system
 zip -r "$wrkdir/$repo-release.zip" "$repo"
 tar czf "$wrkdir/$repo-release.tar.gz" "$repo"
 cd "$wrkdir"
